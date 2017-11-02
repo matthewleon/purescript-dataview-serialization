@@ -24,7 +24,7 @@ instance applyDecoder :: Apply Decoder
 instance applicativeDecoder :: Applicative Decoder
   where
   pure :: forall a. a -> Decoder a
-  pure = Decoder <<< const <<< const <<< Just <<< Tuple 0
+  pure x = Decoder <<< const $ \bo -> Just $ Tuple bo x
 
 instance bindDecoder :: Bind Decoder
   where
