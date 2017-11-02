@@ -19,14 +19,20 @@ instance applyDecoder :: Apply Decoder
   where
   apply :: forall a b. Decoder (a -> b) -> Decoder a -> Decoder b
   apply d1 d2 = Decoder $ \dv bo ->
-    case runDecoder d1 dv bo of
-      Just (Tuple bo' f) -> runDecoder (f <$> d2) dv bo'
-      Nothing -> Nothing
+    runDecoder d1 dv bo >>= \(Tuple bo' f) -> runDecoder (f <$> d2) dv bo'
 
 instance applicativeDecoder :: Applicative Decoder
   where
   pure :: forall a. a -> Decoder a
   pure = Decoder <<< const <<< const <<< Just <<< Tuple 0
+
+instance bindDecoder :: Bind Decoder
+  where
+  bind :: forall a b. Decoder a -> (a -> Decoder b) -> Decoder b
+  bind d f = Decoder $ \dv bo ->
+    runDecoder d dv bo >>= \(Tuple bo' r) -> runDecoder (f r) dv bo'
+
+instance monadDecoder :: Monad Decoder
 
 runDecoder ::forall a.
   Decoder a -> DataView -> ByteOffset -> Maybe (Tuple ByteOffset a)

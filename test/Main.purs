@@ -7,6 +7,7 @@ import Control.Monad.Eff.Console (CONSOLE, logShow)
 import Data.ArrayBuffer.DataView as DV
 import Data.ArrayBuffer.TypedArray as TA
 import Data.ArrayView.DataView.Serialization (runDecoder, getInt8)
+import Data.Tuple (Tuple(..))
 
 main :: forall e. Eff (console :: CONSOLE | e) Unit
 main = do
@@ -19,3 +20,12 @@ main = do
   logShow $ runDecoder getInt8 dvArr 3
   logShow $ runDecoder ((_ * 7) <$> getInt8) dvArr 0
   logShow $ runDecoder (getInt8 *> getInt8 *> getInt8) dvArr 0
+  logShow $ runDecoder (Tuple <$> getInt8 <*> getInt8) dvArr 0
+  logShow $ runDecoder monadicDecoder dvArr 0
+  
+  where
+    monadicDecoder = do
+      a <- getInt8
+      b <- getInt8
+      c <- getInt8
+      pure [a, b, c]
