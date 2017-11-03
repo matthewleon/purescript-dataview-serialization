@@ -2,6 +2,10 @@ module Data.ArrayView.DataView.Serialization where
 
 import Prelude
 
+import Control.Monad.Eff (Eff)
+import Control.Monad.Rec.Class (Step(..), tailRecM)
+import Control.Monad.ST (ST, pureST)
+import Data.Array.ST (STArray, emptySTArray, pushSTArray, unsafeFreeze)
 import Data.ArrayBuffer.DataView as DV
 import Data.ArrayBuffer.Types (DataView, ByteOffset)
 import Data.Maybe (Maybe(..))
@@ -67,6 +71,33 @@ getUint32be = decoder DV.getUint32be 4
 
 getUint32le :: Decoder Int
 getUint32le = decoder DV.getUint32le 4
+
+type GetArrayState = Tuple Int ByteOffset
+
+getArray :: forall a. Decoder a -> Int -> Decoder (Array a)
+getArray d len = Decoder \dv bo -> pureST do
+  arr <- emptySTArray
+  tailRecM (getArray' arr dv) (Tuple len bo) >>= case _ of
+    Just bo' -> pure <<< Just <<< Tuple bo' =<< unsafeFreeze arr
+    Nothing  -> pure Nothing
+  where
+  getArray'
+    :: forall h
+     . STArray h a
+    -> DataView
+    -> GetArrayState
+    -> Eff (st :: ST h) (Step GetArrayState (Maybe ByteOffset))
+  getArray' arr dv = go
+    where
+    go
+      :: Tuple Int ByteOffset
+      -> Eff (st :: ST h) (Step GetArrayState (Maybe ByteOffset))
+    go (Tuple 0 bo')   = pure $ Done $ Just bo'
+    go (Tuple n' bo')  = case runDecoder d dv bo' of
+      Just (Tuple bo'' x) -> do
+        _ <- pushSTArray arr x
+        pure <<< Loop $ Tuple (n' - 1) bo''
+      Nothing             -> pure $ Done Nothing
 
 decoder :: forall a. DV.Getter a -> ByteOffset -> Decoder a
 decoder g inc = Decoder decoder'
