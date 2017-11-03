@@ -8,7 +8,9 @@ import Control.Monad.ST (ST, pureST)
 import Data.Array.ST (STArray, emptySTArray, pushSTArray, unsafeFreeze)
 import Data.ArrayBuffer.DataView as DV
 import Data.ArrayBuffer.Types (DataView, ByteOffset)
+import Data.Char (fromCharCode)
 import Data.Maybe (Maybe(..))
+import Data.String (fromCharArray)
 import Data.Tuple (Tuple(..))
 
 newtype Decoder a =
@@ -72,6 +74,9 @@ getUint32be = decoder DV.getUint32be 4
 getUint32le :: Decoder Int
 getUint32le = decoder DV.getUint32le 4
 
+getASCIIChar :: Decoder Char
+getASCIIChar = fromCharCode <$> getUint8
+
 type GetArrayState = Tuple Int ByteOffset
 
 getArray :: forall a. Decoder a -> Int -> Decoder (Array a)
@@ -98,6 +103,9 @@ getArray d len = Decoder \dv bo -> pureST do
         _ <- pushSTArray arr x
         pure <<< Loop $ Tuple (n' - 1) bo''
       Nothing             -> pure $ Done Nothing
+
+getASCIIString :: Int -> Decoder String
+getASCIIString = map fromCharArray <<< getArray getASCIIChar
 
 decoder :: forall a. DV.Getter a -> ByteOffset -> Decoder a
 decoder g inc = Decoder decoder'
