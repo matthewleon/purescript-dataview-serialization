@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Monad.Eff (Eff)
 import Control.Monad.Rec.Class (Step(..), tailRecM)
-import Control.Monad.ST (ST, pureST)
+import Control.Monad.ST (ST, newSTRef, pureST)
 import Data.Array.ST (STArray, emptySTArray, pushSTArray, unsafeFreeze)
 import Data.ArrayBuffer.DataView as DV
 import Data.ArrayBuffer.Types (DataView, ByteOffset)
@@ -81,7 +81,27 @@ type GetArrayState = Tuple Int ByteOffset
 
 getArray :: forall a. Decoder a -> Int -> Decoder (Array a)
 getArray d len = Decoder \dv bo -> pureST do
-  arr <- emptySTArray
+  stArr <- emptySTArray
+  stBo <- newSTRef bo
+  stN <- newSTRef len
+  let decode = runDecoder d dv
+  untilE $
+    if stN == 0
+    then pure true
+    else case decode stBo of
+      Just (Tuple bo' x) -> do
+        _ <- writeSTRef stBo bo'
+        pushSTArray stArr x
+        modifySTRef stN (_ - 1)
+        pure false
+      Nothing -> pure true
+  if stN == 0
+  then do
+    bo' <- readSTRef stBo
+    arr <- unsafeFreeze stArr
+    pure <<< Just $ Tuple bo' arr
+  else pure Nothing
+{-
   tailRecM (getArray' arr dv) (Tuple len bo) >>= case _ of
     Just bo' -> pure <<< Just <<< Tuple bo' =<< unsafeFreeze arr
     Nothing  -> pure Nothing
@@ -103,6 +123,7 @@ getArray d len = Decoder \dv bo -> pureST do
         _ <- pushSTArray arr x
         pure <<< Loop $ Tuple (n' - 1) bo''
       Nothing             -> pure $ Done Nothing
+-}
 
 getASCIIString :: Int -> Decoder String
 getASCIIString = map fromCharArray <<< getArray getASCIIChar
