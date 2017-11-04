@@ -79,6 +79,9 @@ getASCIIChar = fromCharCode <$> getUint8
 skipBytes :: Int -> Decoder Unit
 skipBytes n = Decoder \_ bo -> Just $ Tuple (bo + n) unit
 
+setOffset :: ByteOffset -> Decoder Unit
+setOffset = Decoder <<< const <<< const <<< Just <<< flip Tuple unit
+
 type GetArrayState = Tuple Int ByteOffset
 
 getArray :: forall a. Decoder a -> Int -> Decoder (Array a)
