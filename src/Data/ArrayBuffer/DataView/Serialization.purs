@@ -94,7 +94,7 @@ getArray d len = Decoder \dv bo -> pureST do
         *> pure false
       Nothing -> pure true
   readSTRef stN >>= case _ of
-    0 -> Just <$> (Tuple <$> readSTRef stBo <*> unsafeFreeze stArr)
+    0 -> map Just $ Tuple <$> readSTRef stBo <*> unsafeFreeze stArr
     _ -> pure Nothing
 
 getASCIIString :: Int -> Decoder String
