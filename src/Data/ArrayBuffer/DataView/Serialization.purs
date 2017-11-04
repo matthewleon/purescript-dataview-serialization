@@ -84,25 +84,18 @@ getArray d len = Decoder \dv bo -> pureST do
   stBo <- newSTRef bo
   stN <- newSTRef len
   let decode = runDecoder d dv
-  untilE $ do
-    n <- readSTRef stN
-    bo' <- readSTRef stBo
-    if n == 0
-      then pure true
-      else case decode bo' of
-        Just (Tuple bo'' x) -> do
-          _ <- writeSTRef stBo bo''
-          _ <- pushSTArray stArr x
-          _ <- modifySTRef stN (_ - 1)
-          pure false
-        Nothing -> pure true
-  n <- readSTRef stN
-  if n == 0
-    then do
-      bo' <- readSTRef stBo
-      arr <- unsafeFreeze stArr
-      pure <<< Just $ Tuple bo' arr
-    else pure Nothing
+  untilE $ readSTRef stN >>= case _ of
+    0 -> pure true
+    n -> decode <$> readSTRef stBo >>= case _ of
+      Just (Tuple bo' x) ->
+        writeSTRef stBo bo'
+        *> pushSTArray stArr x
+        *> modifySTRef stN (_ - 1)
+        *> pure false
+      Nothing -> pure true
+  readSTRef stN >>= case _ of
+    0 -> Just <$> (Tuple <$> readSTRef stBo <*> unsafeFreeze stArr)
+    _ -> pure Nothing
 
 getASCIIString :: Int -> Decoder String
 getASCIIString = map fromCharArray <<< getArray getASCIIChar
