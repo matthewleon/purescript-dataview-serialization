@@ -1,4 +1,4 @@
-module Data.ArrayView.DataView.Serialization where
+module Data.ArrayBuffer.DataView.Serialization where
 
 import Prelude
 

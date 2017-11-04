@@ -5,8 +5,8 @@ import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, logShow)
 import Data.ArrayBuffer.DataView as DV
+import Data.ArrayBuffer.DataView.Serialization (runDecoder, getInt8, getArray, getASCIIString)
 import Data.ArrayBuffer.TypedArray as TA
-import Data.ArrayView.DataView.Serialization (runDecoder, getInt8, getArray, getASCIIString)
 import Data.Tuple (Tuple(..))
 
 main :: forall e. Eff (console :: CONSOLE | e) Unit
