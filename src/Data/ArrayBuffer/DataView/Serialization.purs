@@ -101,5 +101,4 @@ getASCIIString :: Int -> Decoder String
 getASCIIString = map fromCharArray <<< getArray getASCIIChar
 
 decoder :: forall a. DV.Getter a -> ByteOffset -> Decoder a
-decoder g inc = Decoder decoder'
-  where decoder' dv bo = Tuple (bo + inc) <$> g dv bo
+decoder g inc = Decoder \dv bo -> Tuple (bo + inc) <$> g dv bo
