@@ -2,10 +2,9 @@ module Data.ArrayBuffer.DataView.Serialization where
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Rec.Class (Step(..), tailRecM)
-import Control.Monad.ST (ST, newSTRef, pureST)
-import Data.Array.ST (STArray, emptySTArray, pushSTArray, unsafeFreeze)
+import Control.Monad.Eff (untilE)
+import Control.Monad.ST (modifySTRef, newSTRef, pureST, readSTRef, writeSTRef)
+import Data.Array.ST (emptySTArray, pushSTArray, unsafeFreeze)
 import Data.ArrayBuffer.DataView as DV
 import Data.ArrayBuffer.Types (DataView, ByteOffset)
 import Data.Char (fromCharCode)
@@ -85,45 +84,25 @@ getArray d len = Decoder \dv bo -> pureST do
   stBo <- newSTRef bo
   stN <- newSTRef len
   let decode = runDecoder d dv
-  untilE $
-    if stN == 0
-    then pure true
-    else case decode stBo of
-      Just (Tuple bo' x) -> do
-        _ <- writeSTRef stBo bo'
-        pushSTArray stArr x
-        modifySTRef stN (_ - 1)
-        pure false
-      Nothing -> pure true
-  if stN == 0
-  then do
+  untilE $ do
+    n <- readSTRef stN
     bo' <- readSTRef stBo
-    arr <- unsafeFreeze stArr
-    pure <<< Just $ Tuple bo' arr
-  else pure Nothing
-{-
-  tailRecM (getArray' arr dv) (Tuple len bo) >>= case _ of
-    Just bo' -> pure <<< Just <<< Tuple bo' =<< unsafeFreeze arr
-    Nothing  -> pure Nothing
-  where
-  getArray'
-    :: forall h
-     . STArray h a
-    -> DataView
-    -> GetArrayState
-    -> Eff (st :: ST h) (Step GetArrayState (Maybe ByteOffset))
-  getArray' arr dv = go
-    where
-    go
-      :: Tuple Int ByteOffset
-      -> Eff (st :: ST h) (Step GetArrayState (Maybe ByteOffset))
-    go (Tuple 0 bo')   = pure $ Done $ Just bo'
-    go (Tuple n' bo')  = case runDecoder d dv bo' of
-      Just (Tuple bo'' x) -> do
-        _ <- pushSTArray arr x
-        pure <<< Loop $ Tuple (n' - 1) bo''
-      Nothing             -> pure $ Done Nothing
--}
+    if n == 0
+      then pure true
+      else case decode bo' of
+        Just (Tuple bo'' x) -> do
+          _ <- writeSTRef stBo bo''
+          _ <- pushSTArray stArr x
+          _ <- modifySTRef stN (_ - 1)
+          pure false
+        Nothing -> pure true
+  n <- readSTRef stN
+  if n == 0
+    then do
+      bo' <- readSTRef stBo
+      arr <- unsafeFreeze stArr
+      pure <<< Just $ Tuple bo' arr
+    else pure Nothing
 
 getASCIIString :: Int -> Decoder String
 getASCIIString = map fromCharArray <<< getArray getASCIIChar
