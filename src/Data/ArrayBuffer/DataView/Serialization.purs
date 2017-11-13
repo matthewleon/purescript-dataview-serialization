@@ -5,15 +5,15 @@ import Prelude
 import Control.Monad.Eff (untilE)
 import Control.Monad.ST (modifySTRef, newSTRef, pureST, readSTRef, writeSTRef)
 import Data.Array.ST (emptySTArray, pushSTArray, unsafeFreeze)
-import Data.ArrayBuffer.DataView as DV
-import Data.ArrayBuffer.Types (DataView, ByteOffset)
+import Data.ArrayBuffer.Safe.DataView as DV
 import Data.Char (fromCharCode)
 import Data.Maybe (Maybe(..))
 import Data.String (fromCharArray)
 import Data.Tuple (Tuple(..))
+import Data.UInt (UInt, toInt)
 
 newtype Decoder a =
-  Decoder (DataView -> ByteOffset -> Maybe (Tuple ByteOffset a))
+  Decoder (DV.DataView -> DV.ByteOffset -> Maybe (Tuple DV.ByteOffset a))
 
 instance functorDecoder :: Functor Decoder
   where
@@ -40,7 +40,7 @@ instance bindDecoder :: Bind Decoder
 instance monadDecoder :: Monad Decoder
 
 runDecoder ::forall a.
-  Decoder a -> DataView -> ByteOffset -> Maybe (Tuple ByteOffset a)
+  Decoder a -> DV.DataView -> DV.ByteOffset -> Maybe (Tuple DV.ByteOffset a)
 runDecoder (Decoder d) = d
 
 getInt8 :: Decoder Int
@@ -58,31 +58,31 @@ getInt32be = decoder DV.getInt32be 4
 getInt32le :: Decoder Int
 getInt32le = decoder DV.getInt32le 4
 
-getUint8 :: Decoder Int
+getUint8 :: Decoder UInt
 getUint8 = decoder DV.getUint8 1
 
-getUint16be :: Decoder Int
+getUint16be :: Decoder UInt
 getUint16be = decoder DV.getUint16be 2
 
-getUint16le :: Decoder Int
+getUint16le :: Decoder UInt
 getUint16le = decoder DV.getUint16le 2
 
-getUint32be :: Decoder Int
+getUint32be :: Decoder UInt
 getUint32be = decoder DV.getUint32be 4
 
-getUint32le :: Decoder Int
+getUint32le :: Decoder UInt
 getUint32le = decoder DV.getUint32le 4
 
 getASCIIChar :: Decoder Char
-getASCIIChar = fromCharCode <$> getUint8
+getASCIIChar = fromCharCode <<< toInt <$> getUint8
 
 skipBytes :: Int -> Decoder Unit
 skipBytes n = Decoder \_ bo -> Just $ Tuple (bo + n) unit
 
-setOffset :: ByteOffset -> Decoder Unit
+setOffset :: DV.ByteOffset -> Decoder Unit
 setOffset = Decoder <<< const <<< const <<< Just <<< flip Tuple unit
 
-type GetArrayState = Tuple Int ByteOffset
+type GetArrayState = Tuple Int DV.ByteOffset
 
 getArray :: forall a. Decoder a -> Int -> Decoder (Array a)
 getArray d len = Decoder \dv bo -> pureST do
@@ -106,5 +106,5 @@ getArray d len = Decoder \dv bo -> pureST do
 getASCIIString :: Int -> Decoder String
 getASCIIString = map fromCharArray <<< getArray getASCIIChar
 
-decoder :: forall a. DV.Getter a -> ByteOffset -> Decoder a
+decoder :: forall a. DV.Getter a -> DV.ByteOffset -> Decoder a
 decoder g inc = Decoder \dv bo -> Tuple (bo + inc) <$> g dv bo
