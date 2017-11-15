@@ -11,7 +11,7 @@ import Data.Tuple (Tuple(..))
 
 main :: forall e. Eff (console :: CONSOLE | e) Unit
 main = do
-  let arr = [1, 2, 3]
+  let arr = [1, 2, 3, 4]
       dvArr = DV.fromArrayBuffer <<< TA.buffer $ (TA.fromArray arr :: TA.Int8Array)
   logShow arr
   logShow $ runDecoder getInt8 dvArr 0
@@ -27,9 +27,11 @@ main = do
 
   log ""
   log "getTypedArray"
+  logShow $ DV.byteOffset dvArr
   logShow $ map TA.show <$> runDecoder (getTypedArray :: Decoder TA.Int8Array) dvArr 0
   logShow $ map TA.show <$> runDecoder (getTypedArray :: Decoder TA.Int16Array) dvArr 0
   logShow $ map TA.show <$> runDecoder (getTypedArray :: Decoder TA.Int16Array) dvArr 1
+  logShow $ map TA.show <$> runDecoder (getTypedArray :: Decoder TA.Int16Array) dvArr 2
   
   where
     monadicDecoder = do
