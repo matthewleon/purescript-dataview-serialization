@@ -3,10 +3,10 @@ module Test.Main where
 import Prelude
 
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE, logShow)
+import Control.Monad.Eff.Console (CONSOLE, log, logShow)
+import Data.ArrayBuffer.DataView.Serialization (Decoder, getASCIIString, getArray, getInt8, getTypedArray, runDecoder)
 import Data.ArrayBuffer.Safe.DataView as DV
 import Data.ArrayBuffer.Safe.TypedArray as TA
-import Data.ArrayBuffer.DataView.Serialization (runDecoder, getInt8, getArray, getASCIIString)
 import Data.Tuple (Tuple(..))
 
 main :: forall e. Eff (console :: CONSOLE | e) Unit
@@ -24,6 +24,12 @@ main = do
   logShow $ runDecoder monadicDecoder dvArr 0
   logShow $ runDecoder (getArray getInt8 2) dvArr 1
   logShow $ runDecoder (getASCIIString 2) dvArr 1
+
+  log ""
+  log "getTypedArray"
+  logShow $ map TA.show <$> runDecoder (getTypedArray :: Decoder TA.Int8Array) dvArr 0
+  logShow $ map TA.show <$> runDecoder (getTypedArray :: Decoder TA.Int16Array) dvArr 0
+  logShow $ map TA.show <$> runDecoder (getTypedArray :: Decoder TA.Int16Array) dvArr 1
   
   where
     monadicDecoder = do
