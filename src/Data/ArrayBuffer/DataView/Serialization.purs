@@ -6,6 +6,7 @@ import Control.Monad.Eff (untilE)
 import Control.Monad.ST (modifySTRef, newSTRef, pureST, readSTRef, writeSTRef)
 import Data.Array.ST (emptySTArray, pushSTArray, unsafeFreeze)
 import Data.ArrayBuffer.Safe.DataView as DV
+import Data.ArrayBuffer.Safe.TypedArray as TA
 import Data.Char (fromCharCode)
 import Data.Maybe (Maybe(..))
 import Data.String (fromCharArray)
@@ -76,6 +77,8 @@ getUint32le = decoder DV.getUint32le 4
 getASCIIChar :: Decoder Char
 getASCIIChar = fromCharCode <<< toInt <$> getUint8
 
+--getTypedArray
+
 skipBytes :: Int -> Decoder Unit
 skipBytes n = Decoder \_ bo -> Just $ Tuple (bo + n) unit
 
@@ -105,6 +108,19 @@ getArray d len = Decoder \dv bo -> pureST do
 
 getASCIIString :: Int -> Decoder String
 getASCIIString = map fromCharArray <<< getArray getASCIIChar
+
+getTypedArray
+  :: forall t m
+   . TA.IsArrayType (TA.ArrayView t) m
+  => Decoder (TA.ArrayView t)
+getTypedArray = Decoder \dv bo ->
+  let ab   = DV.buffer dv
+      dvbo = DV.byteOffset dv
+  in do ta <- TA.fromArrayBufferWithOffset ab (dvbo + bo)
+        pure $ Tuple (bo + TA.byteLength ta) ta
+
+--TODO: use byteLength
+--getTypedArrayWithLength :: forall t. Decoder (ArrayView t)
 
 decoder :: forall a. DV.Getter a -> DV.ByteOffset -> Decoder a
 decoder g inc = Decoder \dv bo -> Tuple (bo + inc) <$> g dv bo

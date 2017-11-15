@@ -11,7 +11,8 @@
     "purescript-console": "^3.0.0",
     "purescript-arraybuffer-safe": "matthewleon/purescript-arraybuffer-safe",
     "purescript-tuples": "^4.1.0",
-    "purescript-strings": "^3.3.1"
+    "purescript-strings": "^3.3.1",
+    "purescript-lists": "^4.11.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^3.0.0"
