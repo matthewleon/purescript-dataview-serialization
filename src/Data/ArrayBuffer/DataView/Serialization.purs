@@ -77,8 +77,6 @@ getUint32le = decoder DV.getUint32le 4
 getASCIIChar :: Decoder Char
 getASCIIChar = fromCharCode <<< toInt <$> getUint8
 
---getTypedArray
-
 skipBytes :: Int -> Decoder Unit
 skipBytes n = Decoder \_ bo -> Just $ Tuple (bo + n) unit
 
