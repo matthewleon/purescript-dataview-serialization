@@ -19,13 +19,13 @@ newtype Decoder a =
 instance functorDecoder :: Functor Decoder
   where
   map :: forall a b. (a -> b) -> Decoder a -> Decoder b
-  map f d = Decoder $ \dv bo -> map f <$> runDecoder d dv bo
+  map f d = Decoder $ \dv bo -> map f <$> runDecoder' d dv bo
 
 instance applyDecoder :: Apply Decoder
   where
   apply :: forall a b. Decoder (a -> b) -> Decoder a -> Decoder b
   apply d1 d2 = Decoder $ \dv bo ->
-    runDecoder d1 dv bo >>= \(Tuple bo' f) -> runDecoder (f <$> d2) dv bo'
+    runDecoder' d1 dv bo >>= \(Tuple bo' f) -> runDecoder' (f <$> d2) dv bo'
 
 instance applicativeDecoder :: Applicative Decoder
   where
@@ -36,13 +36,17 @@ instance bindDecoder :: Bind Decoder
   where
   bind :: forall a b. Decoder a -> (a -> Decoder b) -> Decoder b
   bind d f = Decoder $ \dv bo ->
-    runDecoder d dv bo >>= \(Tuple bo' r) -> runDecoder (f r) dv bo'
+    runDecoder' d dv bo >>= \(Tuple bo' r) -> runDecoder' (f r) dv bo'
 
 instance monadDecoder :: Monad Decoder
 
-runDecoder ::forall a.
+runDecoder :: forall a.
+  Decoder a -> DV.DataView -> Maybe (Tuple DV.ByteOffset a)
+runDecoder dec dv = runDecoder' dec dv 0
+
+runDecoder' ::forall a.
   Decoder a -> DV.DataView -> DV.ByteOffset -> Maybe (Tuple DV.ByteOffset a)
-runDecoder (Decoder d) = d
+runDecoder' (Decoder d) = d
 
 getInt8 :: Decoder Int
 getInt8 = decoder DV.getInt8 1
@@ -90,7 +94,7 @@ getArray d len = Decoder \dv bo -> pureST do
   stArr <- emptySTArray
   stBo <- newSTRef bo
   stN <- newSTRef len
-  let decode = runDecoder d dv
+  let decode = runDecoder' d dv
   untilE $ readSTRef stN >>= case _ of
     0 -> pure true
     n -> decode <$> readSTRef stBo >>= case _ of
