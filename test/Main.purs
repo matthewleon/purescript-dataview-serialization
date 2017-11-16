@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log, logShow)
-import Data.ArrayBuffer.DataView.Serialization (Decoder, getASCIIString, getArray, getInt8, getTypedArray, runDecoder)
+import Data.ArrayBuffer.DataView.Serialization (Decoder, getASCIIString, getArray, getInt8, getTypedArray, getTypedArrayWithLength, runDecoder)
 import Data.ArrayBuffer.Safe.DataView as DV
 import Data.ArrayBuffer.Safe.TypedArray as TA
 import Data.Tuple (Tuple(..))
@@ -27,11 +27,20 @@ main = do
 
   log ""
   log "getTypedArray"
-  logShow $ DV.byteOffset dvArr
   logShow $ map TA.show <$> runDecoder (getTypedArray :: Decoder TA.Int8Array) dvArr 0
   logShow $ map TA.show <$> runDecoder (getTypedArray :: Decoder TA.Int16Array) dvArr 0
   logShow $ map TA.show <$> runDecoder (getTypedArray :: Decoder TA.Int16Array) dvArr 1
   logShow $ map TA.show <$> runDecoder (getTypedArray :: Decoder TA.Int16Array) dvArr 2
+
+  log ""
+  log "getTypedArrayWithLength"
+  logShow $ map TA.show <$> runDecoder (getTypedArrayWithLength 1 :: Decoder TA.Int8Array) dvArr 0
+  logShow $ map TA.show <$> runDecoder (getTypedArrayWithLength 3 :: Decoder TA.Int8Array) dvArr 0
+  logShow $ map TA.show <$> runDecoder (getTypedArrayWithLength 1 :: Decoder TA.Int16Array) dvArr 0
+  logShow $ map TA.show <$> runDecoder (getTypedArrayWithLength 2 :: Decoder TA.Int16Array) dvArr 0
+  logShow $ map TA.show <$> runDecoder (getTypedArrayWithLength 1 :: Decoder TA.Int16Array) dvArr 1
+  logShow $ map TA.show <$> runDecoder (getTypedArrayWithLength 1 :: Decoder TA.Int16Array) dvArr 2
+  logShow $ map TA.show <$> runDecoder (getTypedArrayWithLength 2 :: Decoder TA.Int16Array) dvArr 2
   
   where
     monadicDecoder = do

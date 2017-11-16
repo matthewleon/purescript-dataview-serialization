@@ -119,8 +119,16 @@ getTypedArray = Decoder \dv bo ->
   in do ta <- TA.fromArrayBufferWithOffset ab (dvbo + bo)
         pure $ Tuple (bo + TA.byteLength ta) ta
 
---TODO: use byteLength
---getTypedArrayWithLength :: forall t. Decoder (ArrayView t)
+getTypedArrayWithLength
+  :: forall t m
+   . TA.IsArrayType (TA.ArrayView t) m
+  => TA.ByteLength
+  -> Decoder (TA.ArrayView t)
+getTypedArrayWithLength l = Decoder \dv bo ->
+  let ab   = DV.buffer dv
+      dvbo = DV.byteOffset dv
+  in do ta <- TA.fromArrayBufferWithOffsetAndLength ab (dvbo + bo) l
+        pure $ Tuple (bo + TA.byteLength ta) ta
 
 decoder :: forall a. DV.Getter a -> DV.ByteOffset -> Decoder a
 decoder g inc = Decoder \dv bo -> Tuple (bo + inc) <$> g dv bo
